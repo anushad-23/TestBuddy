@@ -21,7 +21,7 @@ const HomePage = ({ onLogin }) => {
       <header style={styles.header}>
         <h1 style={styles.title}>Welcome to <span style={styles.highlight}>Test Buddy</span></h1>
         <p style={styles.subtitle}>
-          Advanced online exam platform with real-time monitoring and lab-switching detection
+          Advanced online exam platform with real-time monitoring
         </p>
       </header>
 
@@ -31,7 +31,7 @@ const HomePage = ({ onLogin }) => {
             <FaShieldAlt style={styles.icon} />
           </div>
           <h3 style={styles.featureTitle}>Secure Monitoring</h3>
-          <p style={styles.featureText}>Real-time lab-switching detection and activity monitoring</p>
+          <p style={styles.featureText}>Real-time tab-switching detection and activity monitoring</p>
         </div>
         
         <div style={styles.feature}>
@@ -96,7 +96,7 @@ const HomePage = ({ onLogin }) => {
       </section>
 
       <footer style={styles.footer}>
-        <p>© 2023 Test Buddy. All rights reserved.</p>
+        <p>© 2025 Test Buddy. All rights reserved.</p>
       </footer>
     </div>
   );

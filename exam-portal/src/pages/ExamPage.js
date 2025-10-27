@@ -7,37 +7,40 @@ const ExamPage = () => {
   const { examId } = useParams();
   const navigate = useNavigate();
 
-  const studentId = "1"; // Replace with real student ID
   const studentName = localStorage.getItem("username") || "Student";
-
-  // Dummy questions for demo
-  const questions = [
-    { id: 1, question: "2 + 2 = ?", options: ["3", "4", "5"], answer: "4" },
-    { id: 2, question: "Capital of France?", options: ["Berlin", "Paris", "Rome"], answer: "Paris" },
-    { id: 3, question: "React is a ___ library?", options: ["UI", "Database", "OS"], answer: "UI" },
-  ];
-
+  const [exam, setExam] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(60 * 60); // 1 hour demo
+  const [timeLeft, setTimeLeft] = useState(60 * 30); // default 30 mins
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [socket, setSocket] = useState(null);
 
-  // Connect to backend
+  // ✅ Connect to backend + fetch exam
   useEffect(() => {
-    const newSocket = io("http://localhost:5000");
+    const newSocket = io("http://localhost:8081");
     setSocket(newSocket);
 
-    newSocket.emit("exam-start", {
-      studentId,
-      studentName,
-      examId,
-    });
+    // Identify as student for real-time alerts
+    newSocket.emit("register_role", { role: "STUDENT" });
 
-    return () => newSocket.close();
+    // Fetch exam data from backend
+    const fetchExam = async () => {
+      try {
+        const res = await fetch(`http://localhost:8081/api/exams/${examId}`);
+        const data = await res.json();
+        setExam(data);
+        setTimeLeft((data.duration || 30) * 60); // set duration from DB
+      } catch (err) {
+        console.error("❌ Failed to fetch exam:", err);
+      }
+    };
+
+    fetchExam();
+
+    return () => newSocket.disconnect();
   }, [examId]);
 
-  // Tab switch detection
+  // ✅ Tab switch detection → sends alert to teacher
   useEffect(() => {
     if (!socket) return;
 
@@ -47,35 +50,19 @@ const ExamPage = () => {
         setTabSwitchCount(newCount);
 
         socket.emit("exam_tab_switch", {
-          studentId,
-          studentName,
-          examId,
-          severity: "high",
+          student: studentName,
+          examId: exam?.title || examId,
         });
 
-        alert(`⚠️ Tab switch detected! Violation #${newCount}`);
+        alert(`⚠️ Tab switch detected! (${newCount} times)`);
       }
     };
 
-    const handleBlur = () => {
-      socket.emit("exam_tab_switch", {
-        studentId,
-        studentName,
-        examId,
-        severity: "medium",
-      });
-    };
-
     document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("blur", handleBlur);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [socket, tabSwitchCount, exam, examId]);
 
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, [socket, tabSwitchCount, examId]);
-
-  // Countdown timer
+  // ✅ Timer countdown
   useEffect(() => {
     if (timeLeft <= 0) {
       handleSubmit();
@@ -85,24 +72,32 @@ const ExamPage = () => {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
+  // ✅ Select answer
   const handleAnswer = (option) => {
-    setAnswers({ ...answers, [questions[currentQuestion].id]: option });
+    setAnswers({ ...answers, [exam.questions[currentQuestion]._id]: option });
   };
 
-  const handleNext = () => {
-    if (currentQuestion < questions.length - 1) setCurrentQuestion(prev => prev + 1);
-  };
+  // ✅ Submit answers to backend
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch("http://localhost:8081/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student: studentName,
+          examId,
+          answers,
+        }),
+      });
 
-  const handlePrev = () => {
-    if (currentQuestion > 0) setCurrentQuestion(prev => prev - 1);
-  };
-
-  const handleSubmit = () => {
-    if (socket) {
-      socket.emit("exam-submit", { studentId, studentName, examId, answers });
+      const data = await res.json();
+      alert("✅ Exam submitted successfully!");
+      console.log("Submission saved:", data);
+      navigate("/student");
+    } catch (err) {
+      console.error("❌ Failed to submit exam:", err);
+      alert("Submission failed. Please try again.");
     }
-    alert("Exam submitted successfully!");
-    navigate("/student");
   };
 
   const formatTime = (seconds) => {
@@ -111,7 +106,9 @@ const ExamPage = () => {
     return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
   };
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
+  if (!exam) return <div className="exam-loading">Loading exam...</div>;
+
+  const progress = ((currentQuestion + 1) / exam.questions.length) * 100;
 
   return (
     <div className="exam-page">
@@ -122,7 +119,7 @@ const ExamPage = () => {
       )}
 
       <div className="exam-header">
-        <h2>Exam ID: {examId}</h2>
+        <h2>{exam.title}</h2>
         <div className="exam-timer">
           Time Left: <span className="time">{formatTime(timeLeft)}</span>
         </div>
@@ -134,15 +131,15 @@ const ExamPage = () => {
 
       <div className="question-section">
         <div className="question-card">
-          <h3>{questions[currentQuestion].question}</h3>
+          <h3>{exam.questions[currentQuestion].question}</h3>
           <div className="options-list">
-            {questions[currentQuestion].options.map((option, idx) => (
+            {exam.questions[currentQuestion].options.map((option, idx) => (
               <label key={idx} className="option">
                 <input
                   type="radio"
-                  name={`q-${questions[currentQuestion].id}`}
+                  name={`q-${exam.questions[currentQuestion]._id}`}
                   value={option}
-                  checked={answers[questions[currentQuestion].id] === option}
+                  checked={answers[exam.questions[currentQuestion]._id] === option}
                   onChange={() => handleAnswer(option)}
                 />
                 <span>{option}</span>
@@ -152,14 +149,16 @@ const ExamPage = () => {
         </div>
 
         <div className="navigation">
-          <button onClick={handlePrev} disabled={currentQuestion === 0}>← Previous</button>
+          <button onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}>
+            ← Previous
+          </button>
 
           <div className="question-dots">
-            {questions.map((_, idx) => (
+            {exam.questions.map((_, idx) => (
               <button
                 key={idx}
                 className={`dot ${idx === currentQuestion ? "active" : ""} ${
-                  answers[questions[idx].id] ? "answered" : ""
+                  answers[exam.questions[idx]._id] ? "answered" : ""
                 }`}
                 onClick={() => setCurrentQuestion(idx)}
               >
@@ -168,10 +167,12 @@ const ExamPage = () => {
             ))}
           </div>
 
-          {currentQuestion === questions.length - 1 ? (
+          {currentQuestion === exam.questions.length - 1 ? (
             <button onClick={handleSubmit}>Submit Exam</button>
           ) : (
-            <button onClick={handleNext}>Next →</button>
+            <button onClick={() => setCurrentQuestion(prev => prev + 1)}>
+              Next →
+            </button>
           )}
         </div>
       </div>
@@ -179,7 +180,8 @@ const ExamPage = () => {
       <div className="exam-warning">
         <h4>⚠️ Important Notice</h4>
         <p>
-          This exam is being monitored in real-time. Tab switching, opening new windows, or using unauthorized resources will be detected and reported.
+          This exam is being monitored in real-time. Tab switching or leaving the
+          exam window will be detected and reported to your instructor.
         </p>
       </div>
     </div>
