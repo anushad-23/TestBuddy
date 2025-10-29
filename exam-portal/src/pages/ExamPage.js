@@ -17,7 +17,7 @@ const ExamPage = () => {
 
   // ✅ Connect to backend + fetch exam
   useEffect(() => {
-    const newSocket = io("http://localhost:8081");
+    const newSocket = io("http://localhost:5000");
     setSocket(newSocket);
 
     // Identify as student for real-time alerts
@@ -26,7 +26,7 @@ const ExamPage = () => {
     // Fetch exam data from backend
     const fetchExam = async () => {
       try {
-        const res = await fetch(`http://localhost:8081/api/exams/${examId}`);
+        const res = await fetch(`http://localhost:5000/api/exams/${examId}`);
         const data = await res.json();
         setExam(data);
         setTimeLeft((data.duration || 30) * 60); // set duration from DB
@@ -80,7 +80,7 @@ const ExamPage = () => {
   // ✅ Submit answers to backend
   const handleSubmit = async () => {
     try {
-      const res = await fetch("http://localhost:8081/api/submissions", {
+      const res = await fetch("http://localhost:5000/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

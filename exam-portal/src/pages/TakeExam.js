@@ -11,7 +11,7 @@ function TakeExam() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const res = await fetch("http://localhost:8081/api/exams");
+        const res = await fetch("http://localhost:5000/api/exams");
         const data = await res.json();
         setExams(data);
       } catch (err) {
