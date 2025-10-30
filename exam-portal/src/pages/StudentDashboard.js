@@ -12,7 +12,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const res = await fetch("http://localhost:8081/api/exams");
+        const res = await fetch("http://localhost:5000/api/exams");
         const data = await res.json();
         setExams(data);
       } catch (err) {
@@ -23,7 +23,7 @@ const StudentDashboard = () => {
     fetchExams();
 
     // ✅ Real-time updates using Socket.IO
-    const socket = io("http://localhost:8081");
+    const socket = io("http://localhost:5000");
 
     // When teacher creates a new exam, update student dashboard instantly
     socket.on("new-exam", (exam) => {
@@ -33,6 +33,16 @@ const StudentDashboard = () => {
 
     return () => socket.disconnect();
   }, []);
+
+  // Only show exams with future or today scheduledFor, if set
+  const now = new Date();
+  const scheduledExams = exams.filter(exam =>
+    exam.scheduledFor ? new Date(exam.scheduledFor) >= now : true
+  ).sort((a, b) => {
+    const dA = a.scheduledFor ? new Date(a.scheduledFor) : new Date(a.createdAt);
+    const dB = b.scheduledFor ? new Date(b.scheduledFor) : new Date(b.createdAt);
+    return dA - dB;
+  });
 
   // ✅ Compute statistics dynamically
   const stats = {
@@ -130,16 +140,21 @@ const StudentDashboard = () => {
       <div style={styles.examsSection}>
         <h2 style={styles.sectionTitle}>Available Exams</h2>
 
-        {exams.length === 0 ? (
+        {scheduledExams.length === 0 ? (
           <p style={styles.noExams}>No exams available right now.</p>
         ) : (
-          exams.map((exam) => (
+          scheduledExams.map((exam) => (
             <div key={exam._id} style={styles.examCard}>
               <div style={styles.examHeader}>
                 <label style={styles.examLabel}>{exam.title}</label>
                 <span style={styles.examSubject}>{exam.subject}</span>
               </div>
               <div style={styles.examDetails}>
+                {exam.scheduledFor && (
+                  <span style={{color: '#2c3e50', fontWeight: 'bold'}}>
+                    Scheduled: {new Date(exam.scheduledFor).toLocaleString()}
+                  </span>
+                )}
                 <span>{exam.duration} minutes</span>
                 <span>{exam.questions?.length || 0} questions</span>
                 <span style={styles.dueDate}>

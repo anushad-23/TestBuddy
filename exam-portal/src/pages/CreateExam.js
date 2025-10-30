@@ -18,6 +18,8 @@ const CreateExam = () => {
     description: "",
   });
 
+  const [examSchedule, setExamSchedule] = useState({ date: '', time: '' });
+
   const [loading, setLoading] = useState(false);
 
   // ✅ Add new question
@@ -75,8 +77,12 @@ const CreateExam = () => {
     setLoading(true);
 
     try {
+      const scheduledFor = (examSchedule.date && examSchedule.time)
+        ? new Date(`${examSchedule.date}T${examSchedule.time}:00`).toISOString()
+        : null;
       const examData = {
         ...examDetails,
+        scheduledFor,
         questions: questions.map((q) => ({
           question: q.question,
           options: q.options,
@@ -105,6 +111,7 @@ const CreateExam = () => {
         setQuestions([
           { id: 1, question: "", options: ["", "", "", ""], correctAnswer: "", points: 1 },
         ]);
+        setExamSchedule({ date: '', time: '' });
       } else {
         alert("❌ Failed to create exam: " + (data.message || "Unknown error"));
       }
@@ -145,10 +152,10 @@ const CreateExam = () => {
               onChange={(e) => handleExamDetailChange("subject", e.target.value)}
             >
               <option value="">Select subject</option>
-              <option value="Mathematics">Mathematics</option>
-              <option value="Physics">Physics</option>
-              <option value="Chemistry">Chemistry</option>
-              <option value="Biology">Biology</option>
+              <option value="Java">JAVA</option>
+              <option value="Python">Python</option>
+              <option value="DBMS">DBMS</option>
+              <option value="OS">OS</option>
             </select>
           </div>
         </div>
@@ -177,6 +184,27 @@ const CreateExam = () => {
               handleExamDetailChange("description", e.target.value)
             }
           />
+        </div>
+
+        <div style={styles.formRow}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Schedule Date</label>
+            <input
+              type="date"
+              style={styles.input}
+              value={examSchedule.date}
+              onChange={e => setExamSchedule({ ...examSchedule, date: e.target.value })}
+            />
+          </div>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Schedule Time</label>
+            <input
+              type="time"
+              style={styles.input}
+              value={examSchedule.time}
+              onChange={e => setExamSchedule({ ...examSchedule, time: e.target.value })}
+            />
+          </div>
         </div>
       </div>
 

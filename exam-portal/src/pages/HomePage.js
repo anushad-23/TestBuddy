@@ -8,12 +8,12 @@ const HomePage = ({ onLogin }) => {
 
   const handleStudentLogin = () => {
     onLogin('student');
-    navigate('/student');
+    navigate('/login', { state: { role: 'student' } });
   };
 
   const handleTeacherLogin = () => {
     onLogin('teacher');
-    navigate('/teacher');
+    navigate('/login', { state: { role: 'teacher' } });
   };
 
   return (
